@@ -1,0 +1,22 @@
+{
+  "species": [
+    "Chinook Salmon",
+    "Coho Salmon",
+    "Sockeye Salmon",
+    "Steelhead Trout",
+    "Rainbow Trout",
+    "Bull Trout",
+    "Cutthroat Trout",
+    "Brook Trout",
+    "Lake Trout",
+    "Other"
+  ],
+  "sites": [
+    "Site A - Lower River",
+    "Site B - Middle Creek",
+    "Site C - Upper Falls",
+    "Site D - Hatchery",
+    "Site E - Tributary Junction",
+    "Other"
+  ]
+}

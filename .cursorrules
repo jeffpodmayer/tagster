@@ -1,0 +1,170 @@
+# PIT Tag Mobile App - Cursor Rules
+
+## Project Context
+
+- React Native app with Expo (managed workflow)
+- Offline-first BLE tag scanner for fish & wildlife field staff
+- TypeScript + React Native Paper + SQLite
+- Target: Both iOS and Android
+
+## Essential Code Standards
+
+### TypeScript
+
+- Use strict mode. No `any` types except in documented edge cases.
+- All functions must have return type annotations.
+- Use interfaces for data models, types for unions/intersections.
+
+### React Patterns
+
+- Functional components only. No class components.
+- Use hooks for all state and side effects.
+- Custom hooks should start with `use` (e.g., `useScans()`, `useBLE()`).
+
+### File Structure
+
+- Screens go in `/src/screens/`
+- Components in `/src/components/`
+- Utils in `/src/utils/`
+- Contexts in `/src/context/`
+- Types in `/src/models/`
+- Never create files outside this structure without asking.
+
+## Workflow
+
+- Provide a step by step approach to implementing each feature, solution or fix so I am able to learn as I code this application.
+
+## Field-First UX Rules
+
+### Touch Targets
+
+- All buttons, touchable elements minimum 44x44 pixels.
+- Consider field use: gloves, sunlight, wet conditions.
+
+### Offline-First
+
+- Every feature must work without internet.
+- Network calls are enhancements, not requirements.
+- Never assume connectivity.
+
+### Data Safety
+
+- Confirm all destructive actions (delete, clear, bulk operations).
+- Auto-save form state to prevent data loss.
+- Show save confirmation to user.
+
+## BLE-Specific Rules
+
+### Error Handling
+
+- Wrap all BLE operations in try/catch.
+- Disconnections are expected, not errors - handle gracefully.
+- Provide user-friendly error messages, no technical jargon.
+
+### Connection Status
+
+- Show BLE connection status on every relevant screen.
+- Use consistent status indicator (icon/badge in header).
+
+### Graceful Degradation
+
+- If BLE fails, allow manual tag ID entry.
+- Never block core functionality due to BLE issues.
+
+## Database & Data Integrity
+
+### IDs and Timestamps
+
+- Use UUIDs (uuid library) for all primary keys, not auto-increment.
+- Every record needs `createdAt` and `updatedAt` in ISO 8601 format.
+- Use UTC for all timestamps, convert to local only for display.
+
+### Database Layer
+
+- All SQLite operations go through `src/utils/database.ts`.
+- No raw SQL in components or contexts.
+- Export typed functions (e.g., `createScan(data: TagScan)` not raw queries).
+
+### Validation
+
+- Validate data before saving to database.
+- Tag ID is required. Other fields are optional unless specified.
+- Show validation errors to user before save attempt.
+
+### CSV Export
+
+- Escape commas, quotes, newlines in all text fields.
+- Use consistent date format (ISO 8601).
+- Test with messy data (special characters, long text).
+
+## Performance
+
+### Lists
+
+- Use FlatList for any list with >20 items (never ScrollView).
+- Implement `keyExtractor` and `getItemLayout` when possible.
+
+### Search & Filter
+
+- Debounce search inputs (300ms minimum).
+- Show loading indicator during search/filter operations.
+
+## Architecture
+
+### Context Organization
+
+- Each context manages one domain (ScanContext, BLEContext, AppContext).
+- No cross-domain logic in contexts.
+- Export custom hooks (e.g., `export const useScans = () => useContext(ScanContext)`).
+
+### Component Responsibility
+
+- Components render UI and handle user input only.
+- Business logic lives in contexts or utils.
+- Keep components under 200 lines - split if larger.
+
+## React Native Paper Usage
+
+- Use Paper components by default (Button, TextInput, Card, List, etc.).
+- Import from 'react-native-paper', not base React Native.
+- Use Paper theme for colors/spacing, not hardcoded values.
+- Only use base React Native components when Paper doesn't provide equivalent.
+- Check React Native Paper docs before recommending implemttaions and changes.
+
+## Expo Conventions
+
+- Use Expo APIs when available (expo-location, expo-sqlite, expo-sharing).
+- Prefer Expo managed workflow - avoid ejecting.
+- Check Expo docs before installing third-party libraries.
+
+## Error Handling Patterns
+
+- Always use try/catch for async operations (database, BLE, file system).
+- Log errors to console with context: `console.error('[BLE] Connection failed:', error)`.
+- Show user-friendly error in UI: "Unable to connect to reader. Please try again."
+- Never crash the app - graceful degradation always.
+
+## Async Patterns
+
+- Use async/await, not .then() chains.
+- Handle loading states with boolean flags (`isLoading`, `isConnecting`).
+- Handle error states separately from loading states.
+
+## Code Style Preferences
+
+- Prefer named exports over default exports (easier refactoring).
+- Use destructuring for props and context values.
+- Early returns for error conditions.
+- Meaningful variable names (no abbreviations except standard: `id`, `url`, `ble`).
+
+## Comments
+
+- Comment complex BLE logic (service UUIDs, characteristic parsing).
+- Comment non-obvious business logic ("why" not "what").
+- Don't comment obvious code.
+
+## When Unsure
+
+- If a requirement is ambiguous, ask before implementing.
+- If multiple approaches exist, explain trade-offs, provide breakdowsn of all options and recommend one.
+- Follow these rules unless explicitly told otherwise.
