@@ -5,6 +5,7 @@ import { ScanProvider } from "./src/context/ScanContext";
 import { AppProvider } from "./src/context/AppContext";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { theme } from "./src/styles/theme";
+import { BLEProvider } from "./src/context/BLEContext";
 
 /**
  * Main App Component
@@ -21,9 +22,11 @@ export default function App() {
   return (
     <PaperProvider theme={theme}>
       <AppProvider>
-        <ScanProvider>
-          <AppNavigator />
-        </ScanProvider>
+        <BLEProvider>
+          <ScanProvider>
+            <AppNavigator />
+          </ScanProvider>
+        </BLEProvider>
       </AppProvider>
     </PaperProvider>
   );

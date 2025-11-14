@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { View, StyleSheet, ScrollView } from "react-native";
 import {
   Text,
@@ -6,16 +6,17 @@ import {
   Button,
   List,
   Divider,
-  Chip,
   useTheme,
-  FAB,
 } from "react-native-paper";
 import type { AppTheme } from "../styles/theme";
 import { useScans } from "../context/ScanContext";
 import { useAppSettings } from "../context/AppContext";
+import { useBLE } from "../context/BLEContext";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import type { RootTabParamList } from "../navigation/AppNavigator";
+import { BLEDeviceModal } from "../components/BLEDeviceModal";
+import { ConnectReaderFAB } from "../components/ConnectReaderFAB";
 
 type NavigationProp = BottomTabNavigationProp<RootTabParamList, "Home">;
 
@@ -24,6 +25,22 @@ const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { scans } = useScans();
   const { settings } = useAppSettings();
+
+  // ============ NEW: BLE HOOKS ============
+  const {
+    isScanning,
+    isConnected,
+    connectedDevice,
+    discoveredDevices,
+    bluetoothState,
+    startScan,
+    stopScan,
+    connectToDevice,
+    disconnect,
+  } = useBLE();
+
+  // ============ NEW: BLE UI STATE ============
+  const [bleModalVisible, setBleModalVisible] = useState(false);
 
   // Create styles using theme
   const styles = StyleSheet.create({
@@ -110,6 +127,28 @@ const HomeScreen: React.FC = () => {
       bottom: 0,
       backgroundColor: theme.colors.primary,
     },
+
+    modalContainer: {
+      backgroundColor: theme.colors.background,
+      padding: theme.spacing.lg,
+      margin: theme.spacing.lg,
+      borderRadius: 8,
+      maxHeight: "100%",
+    },
+    deviceItem: {
+      paddingVertical: theme.spacing.sm,
+    },
+    emptyDeviceList: {
+      textAlign: "center",
+      padding: theme.spacing.xl,
+      color: theme.colors.textSecondary,
+    },
+    scanningIndicator: {
+      marginVertical: theme.spacing.md,
+    },
+    connectedChip: {
+      marginTop: theme.spacing.sm,
+    },
   });
 
   /**
@@ -151,6 +190,84 @@ const HomeScreen: React.FC = () => {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  /**
+   * Open BLE scanner modal
+   */
+  const handleOpenBleScanner = () => {
+    setBleModalVisible(true);
+    startScan();
+  };
+
+  /**
+   * Close BLE modal
+   */
+  const handleCloseBleModal = () => {
+    stopScan();
+    setBleModalVisible(false);
+  };
+
+  /**
+   * Handle disconnect
+   */
+  const handleDisconnect = async () => {
+    await disconnect();
+  };
+
+  /**
+   * Render BLE Status Card
+   */
+  const renderBleStatusCard = () => {
+    // Not connected
+    if (!isConnected) {
+      return (
+        <Card style={styles.bleStatus}>
+          <Card.Content style={{ alignItems: "center" }}>
+            <List.Item
+              title="Bluetooth Status"
+              description="Not connected"
+              descriptionStyle={{ color: "red" }}
+              left={(props) => <List.Icon {...props} icon="bluetooth-off" />}
+            />
+          </Card.Content>
+        </Card>
+      );
+    }
+
+    // Connected
+    return (
+      <Card style={styles.bleStatus}>
+        <Card.Content style={{ alignItems: "center" }}>
+          <View style={{ alignItems: "center", width: "100%" }}>
+            <List.Icon icon="bluetooth-connect" color="#673AB7" />
+            <Text
+              variant="titleMedium"
+              style={{
+                color: "#673AB7",
+                marginTop: theme.spacing.sm,
+                fontWeight: "600",
+              }}
+            >
+              Connected to {connectedDevice?.name || "Device"}
+            </Text>
+          </View>
+          <Button
+            mode="outlined"
+            onPress={handleDisconnect}
+            icon="bluetooth-off"
+            style={{
+              marginTop: theme.spacing.md,
+              borderColor: theme.colors.error,
+              width: "100%",
+            }}
+            textColor={theme.colors.error}
+          >
+            Disconnect
+          </Button>
+        </Card.Content>
+      </Card>
+    );
+  };
+
   return (
     <>
       <ScrollView style={styles.container}>
@@ -173,16 +290,8 @@ const HomeScreen: React.FC = () => {
             </View>
           </Card>
 
-          {/* BLE Status (Coming Soon) */}
-          <Card style={styles.bleStatus}>
-            <Card.Content>
-              <List.Item
-                title="BLE Reader Status"
-                description="Manual entry mode (BLE coming soon)"
-                left={(props) => <List.Icon {...props} icon="bluetooth-off" />}
-              />
-            </Card.Content>
-          </Card>
+          {/* BLE Status Card - NOW FUNCTIONAL! */}
+          {renderBleStatusCard()}
 
           {/* Stats Row */}
           <View style={styles.statsRow}>
@@ -219,7 +328,7 @@ const HomeScreen: React.FC = () => {
             <Card.Content>
               {recentScans.length === 0 ? (
                 <Text style={styles.emptyText}>
-                  No scans yet. Tap "New Scan" below to get started!
+                  No scans yet. Tap "Start Scanning" below to get started!
                 </Text>
               ) : (
                 <>
@@ -247,40 +356,24 @@ const HomeScreen: React.FC = () => {
               )}
             </Card.Content>
           </Card>
-
-          {/* Quick Actions */}
-          {/* <Card style={styles.sectionCard}>
-            <Card.Title title="Quick Actions" />
-            <Card.Content style={styles.actionButtons}>
-              <Button
-                mode="outlined"
-                icon="format-list-bulleted"
-                onPress={() => navigation.navigate("Logbook")}
-                style={styles.actionButton}
-              >
-                View All Scans ({scans.length})
-              </Button>
-
-              <Button
-                mode="outlined"
-                icon="cog"
-                onPress={() => navigation.navigate("Settings")}
-                style={styles.actionButton}
-              >
-                Settings
-              </Button>
-            </Card.Content>
-          </Card> */}
         </View>
       </ScrollView>
 
-      {/* Floating Action Button for New Scan */}
-      <FAB
-        icon="plus"
-        label="Start Scanning"
-        style={styles.fab}
-        color={theme.colors.surface}
-        onPress={() => navigation.navigate("Scan")}
+      {/* Floating Action Button - Dynamic based on connection */}
+      <ConnectReaderFAB
+        onPress={() => {
+          if (isConnected) {
+            navigation.navigate("Scan");
+          } else {
+            setBleModalVisible(true);
+          }
+        }}
+      />
+
+      {/* BLE Scanner Modal */}
+      <BLEDeviceModal
+        visible={bleModalVisible}
+        onDismiss={handleCloseBleModal}
       />
     </>
   );
