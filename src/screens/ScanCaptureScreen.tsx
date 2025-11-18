@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, ScrollView, Alert } from "react-native";
 import {
   Text,
@@ -29,7 +29,17 @@ const ScanCaptureScreen: React.FC = () => {
   const { addScan, scans } = useScans();
   const { settings } = useAppSettings();
   const theme = useTheme<AppTheme>();
-  const { isConnected, connectedDevice } = useBLE();
+  const {
+    isConnected,
+    lastTagId,
+    connectedDevice,
+    discover,
+    readCharacteristic,
+  } = useBLE();
+
+  // Track the last tag ID we've already processed (prevents duplicate alerts)
+  const lastProcessedTagRef = useRef<string | null>(null);
+
   // Form state
   const [tagId, setTagId] = useState("");
   const [operator, setOperator] = useState(settings.defaultOperator || "");
@@ -50,6 +60,28 @@ const ScanCaptureScreen: React.FC = () => {
       setOperator(settings.defaultOperator);
     }
   }, [settings.defaultOperator]);
+
+  /// Auto-populate tag ID when BLE device sends data
+  useEffect(() => {
+    if (
+      lastTagId &&
+      lastTagId !== tagId &&
+      lastTagId !== lastProcessedTagRef.current &&
+      tagId.trim() === ""
+    ) {
+      console.log("[ScanCapture] Received tag ID from BLE:", lastTagId);
+      setTagId(lastTagId);
+      Alert.alert("Tag Scanned! 🏷️", `Tag ID: ${lastTagId}\n\nReady to save!`);
+      lastProcessedTagRef.current = lastTagId;
+    }
+  }, [lastTagId, tagId]); // Only run when lastTagId changes
+
+  // Reset processed tag when user clears the input
+  useEffect(() => {
+    if (!tagId) {
+      lastProcessedTagRef.current = null;
+    }
+  }, [tagId]);
 
   const styles = StyleSheet.create({
     container: {
@@ -93,6 +125,10 @@ const ScanCaptureScreen: React.FC = () => {
     },
     spacer: {
       height: theme.spacing.xl,
+    },
+    readButtonContainer: {
+      marginBottom: theme.spacing.md,
+      alignItems: "center",
     },
   });
 
@@ -165,6 +201,21 @@ const ScanCaptureScreen: React.FC = () => {
     }
   };
 
+  /**
+   * NEW: Handle tag read from button
+   */
+  const handleTagRead = (receivedTagId: string) => {
+    console.log("[ScanCapture] Tag received from button:", receivedTagId);
+    setTagId(receivedTagId);
+    Alert.alert(
+      "Tag Scanned! 🏷️",
+      `Tag ID: ${receivedTagId}\n\nReady to save!`
+    );
+  };
+
+  /**
+   * Render the screen
+   */
   return (
     <>
       <ScrollView style={styles.container}>
@@ -180,8 +231,10 @@ const ScanCaptureScreen: React.FC = () => {
               </>
             ) : (
               <Text variant="bodyMedium" style={styles.instructions}>
-                📡 Connected to {connectedDevice?.name || "reader"}. Ready to
-                scan!
+                📡 Connected to {connectedDevice?.name || "reader"}.
+                {lastTagId
+                  ? `\n\nLast tag id shown here!{lastTagId}`
+                  : "\n\nScan a tag with your reader!"}
               </Text>
             )}
           </Card.Content>
@@ -201,6 +254,24 @@ const ScanCaptureScreen: React.FC = () => {
               autoCapitalize="characters"
               autoCorrect={false}
             />
+            {isConnected && (
+              <Card style={{ margin: 8, backgroundColor: "#FFF3CD" }}>
+                <Card.Content>
+                  <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+                    🔧 Setup Mode
+                  </Text>
+                  <Button mode="outlined" onPress={discover}>
+                    Run Discovery
+                  </Button>
+                  <Text
+                    style={{ fontSize: 10, marginTop: 8, color: "#856404" }}
+                  >
+                    After discovery, update UUIDs in
+                    src/config/bleDeviceConfig.ts
+                  </Text>
+                </Card.Content>
+              </Card>
+            )}
             <Text variant="bodySmall" style={styles.helpText}>
               * Required field
             </Text>
