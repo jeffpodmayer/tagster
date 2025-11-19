@@ -9,14 +9,17 @@
  * 5. Done!
  */
 
+// Constant for unconfigured UUID values
+export const UNCONFIGURED = "UNCONFIGURED" as const;
+
 // ============================================
 // DEVICE SETTINGS
 // ============================================
 
 export const READER_CONFIG = {
   // TODO: Update these after running discovery with your device
-  SERVICE_UUID: "UNKNOWN",
-  CHARACTERISTIC_UUID: "UNKNOWN",
+  SERVICE_UUID: UNCONFIGURED,
+  CHARACTERISTIC_UUID: UNCONFIGURED,
 
   // Will the characteristic send notifications? (true = automatic, false = manual read)
   USE_NOTIFICATIONS: true,
@@ -63,7 +66,7 @@ export function parseTagData(hexString: string): string | null {
 
 export function isConfigured(): boolean {
   return (
-    READER_CONFIG.SERVICE_UUID !== "UNKNOWN" &&
-    READER_CONFIG.CHARACTERISTIC_UUID !== "UNKNOWN"
+    READER_CONFIG.SERVICE_UUID !== UNCONFIGURED &&
+    READER_CONFIG.CHARACTERISTIC_UUID !== UNCONFIGURED
   );
 }

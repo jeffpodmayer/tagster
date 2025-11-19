@@ -26,28 +26,74 @@ import {
   isConfigured,
 } from "../config/bleDeviceConfig";
 
+// ============================================
+// ERROR MESSAGES (Centralized)
+// ============================================
+const ERROR_MESSAGES = {
+  NO_DEVICE: "No device connected",
+  DISCOVERY_FAILED: "Discovery failed",
+} as const;
+
+// ============================================
+// LOGGING CONVENTIONS
+// ============================================
+// [BLE] - Core BLE operations
+// [Discovery] - Device discovery (bleTagReader.ts)
+// [Monitor] - Notification listeners (bleTagReader.ts)
+// [Read] - Manual reads (bleTagReader.ts)
+// [Parse] - Tag parsing (bleDeviceConfig.ts)
+//
+// Emojis: 🔍 search, 🔌 connect, ✅ success, ❌ error, ⚠️ warning, 📡 BLE ops, 🔔 notify
+// ============================================
+
 /**
- * BLE Context Interface - SIMPLIFIED
+ * BLE Context Interface
  *
- * Focus: Connect, discover, monitor
+ * Manages BLE device scanning, connection, and data reading for PIT tag readers.
  */
 interface BLEContextType {
   // ============ STATE ============
+  /** Whether BLE scanning is active */
   isScanning: boolean;
+  /** Whether a device is connected */
   isConnected: boolean;
+  /** Currently connected device, or null */
   connectedDevice: Device | null;
+  /** List of discovered BLE devices */
   discoveredDevices: Device[];
+  /** Bluetooth adapter state (PoweredOn, PoweredOff, etc.) */
   bluetoothState: State;
+  /** Last error message, or null */
   error: string | null;
+  /** Last parsed tag ID from connected device */
   lastTagId: string | null;
 
   // ============ ACTIONS ============
+  /** Start scanning for BLE devices */
   startScan: () => Promise<void>;
+  /** Stop scanning */
   stopScan: () => void;
+  /**
+   * Connect to a device by ID
+   * @param deviceId - Device ID from discoveredDevices
+   */
   connectToDevice: (deviceId: string) => Promise<void>;
+  /** Disconnect from current device */
   disconnect: () => Promise<void>;
-  discover: () => Promise<void>; // Run discovery manually
+  /**
+   * Run discovery to log all services/characteristics
+   * Use in dev mode to find UUIDs for bleDeviceConfig.ts
+   */
+  discover: () => Promise<void>;
+  /**
+   * Request BLE permissions
+   * @returns true if granted
+   */
   requestPermissions: () => Promise<boolean>;
+  /**
+   * Read a characteristic value manually
+   * @returns Hex string or null
+   */
   readCharacteristic: (
     serviceUUID: string,
     characteristicUUID: string
@@ -67,16 +113,7 @@ interface BLEProviderProps {
 }
 
 /**
- * BLE Provider Component - SIMPLIFIED
- *
- * Removed:
- * - Complex refs for tag tracking
- * - Automatic polling
- * - Tag callbacks
- *
- * Added:
- * - Simple discovery function
- * - Manual monitoring control
+ * BLE Provider Component
  */
 export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
   // ============ BLE MANAGER ============
@@ -92,30 +129,49 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
   const [lastTagId, setLastTagId] = useState<string | null>(null);
 
   // ============ REFS ============
-  // Ref to track connected device (for monitoring)
   const connectedDeviceRef = useRef<Device | null>(null);
-
-  // Ref to store the monitoring cleanup function
   const monitoringCleanupRef = useRef<(() => void) | null>(null);
+
+  /**
+   * Get the current connected device
+   */
+  const getCurrentDevice = (): Device | null => {
+    return connectedDeviceRef.current || connectedDevice;
+  };
 
   // ============ BLUETOOTH STATE MONITORING ============
   useEffect(() => {
-    console.log("[BLE Context] Setting up Bluetooth state listener");
+    console.log("[BLE] Setting up Bluetooth state listener");
 
     const subscription = bleManager.onStateChange((state) => {
-      console.log("[BLE Context] Bluetooth state changed to:", state);
+      console.log("[BLE] Bluetooth state changed to:", state);
       setBluetoothState(state);
 
       // If Bluetooth turns off while connected, auto-disconnect
+      // If Bluetooth turns off while connected, auto-disconnect
       if (state !== State.PoweredOn && isConnected) {
-        console.log("[BLE Context] Bluetooth turned off, disconnecting...");
-        disconnect();
+        console.log("[BLE] Bluetooth turned off, disconnecting...");
+
+        // Stop monitoring if active
+        if (monitoringCleanupRef.current) {
+          monitoringCleanupRef.current();
+          monitoringCleanupRef.current = null;
+        }
+
+        // Disconnect from device
+        disconnectFromBLEDevice(bleManager, connectedDevice, () => {
+          setConnectedDevice(null);
+          setIsConnected(false);
+          connectedDeviceRef.current = null;
+          setLastTagId(null);
+          console.log("[BLE] Disconnected (Bluetooth turned off)");
+        });
       }
     }, true); // true = emit current state immediately
 
     // Cleanup
     return () => {
-      console.log("[BLE Context] Cleaning up BLE Manager");
+      console.log("[BLE] Cleaning up BLE Manager");
       subscription.remove();
       bleManager.destroy();
     };
@@ -129,18 +185,14 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
 
     // Check if device is configured
     if (!isConfigured()) {
-      console.log("[BLE Context] ⚠️ Device not configured yet");
-      console.log(
-        "[BLE Context] 💡 Run discovery and update bleDeviceConfig.ts"
-      );
+      console.log("[BLE] ⚠️ Device not configured yet");
+      console.log("[BLE] 💡 Run discovery and update bleDeviceConfig.ts");
       return;
     }
 
     // Auto-start monitoring with configured UUIDs
     if (READER_CONFIG.USE_NOTIFICATIONS) {
-      console.log(
-        "[BLE Context] 🎬 Auto-starting monitoring with configured UUIDs"
-      );
+      console.log("[BLE] 🎬 Auto-starting monitoring with configured UUIDs");
       startMonitoring(
         READER_CONFIG.SERVICE_UUID,
         READER_CONFIG.CHARACTERISTIC_UUID
@@ -156,7 +208,7 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
   const startScan = async (): Promise<void> => {
     // Prevent duplicate scans
     if (isScanning) {
-      console.log("[BLE Context] Already scanning, ignoring duplicate request");
+      console.log("[BLE] Already scanning, ignoring duplicate request");
       return;
     }
 
@@ -210,9 +262,9 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
         setConnectedDevice(device);
         setIsConnected(true);
         connectedDeviceRef.current = device;
-        console.log("[BLE Context] ✅ Device connected!");
+        console.log("[BLE] 🔌 Device connected!");
         console.log(
-          "[BLE Context] 💡 Next step: Call discover() to see characteristics"
+          "[BLE] 💡 Next step: Call discover() to see characteristics"
         );
       },
       // onError callback
@@ -238,52 +290,47 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
         setIsConnected(false);
         connectedDeviceRef.current = null;
         setLastTagId(null);
-        console.log("[BLE Context] Disconnected and state cleared");
+        console.log("[BLE] Disconnected and state cleared");
       }
     );
   };
 
   // ============ DISCOVERY ============
   const discover = async (): Promise<void> => {
-    const currentDevice = connectedDeviceRef.current || connectedDevice;
+    const currentDevice = getCurrentDevice();
 
     if (!currentDevice) {
-      setError("No device connected");
-      console.error("[BLE Context] ❌ Cannot discover - no device connected");
+      setError(ERROR_MESSAGES.NO_DEVICE);
       return;
     }
 
-    console.log("[BLE Context] 🔍 Running discovery...");
+    console.log("[BLE] 🔍 Running discovery...");
     setError(null);
 
     try {
       await discoverDeviceData(currentDevice);
-      console.log(
-        "[BLE Context] ✅ Discovery complete! Check logs above for UUIDs."
-      );
+      console.log("[BLE] ✅ Discovery complete! Check logs above for UUIDs.");
     } catch (err: any) {
-      console.error("[BLE Context] ❌ Discovery failed:", err.message);
-      setError(`Discovery failed: ${err.message}`);
+      setError(`${ERROR_MESSAGES.DISCOVERY_FAILED}: ${err.message}`);
     }
   };
 
   // ============ MONITORING ============
   const startMonitoring = (serviceUUID: string, charUUID: string): void => {
-    const currentDevice = connectedDeviceRef.current || connectedDevice;
+    const currentDevice = getCurrentDevice();
 
     if (!currentDevice) {
-      console.error("[BLE Context] ❌ Cannot monitor - no device connected");
-      setError("No device connected");
+      setError(ERROR_MESSAGES.NO_DEVICE);
       return;
     }
 
     // Stop existing monitoring if any
     if (monitoringCleanupRef.current) {
-      console.log("[BLE Context] Stopping previous monitoring...");
+      console.log("[BLE] Stopping previous monitoring...");
       monitoringCleanupRef.current();
     }
 
-    console.log("[BLE Context] 🎬 Starting monitoring...");
+    console.log("[BLE] 🎬 Starting monitoring...");
     setError(null);
 
     const cleanup = monitorCharacteristic(
@@ -291,37 +338,32 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
       serviceUUID,
       charUUID,
       (hexString: string) => {
-        console.log(`[BLE Context] 🏷️ Tag received: ${hexString}`);
-        setLastTagId(hexString);
+        console.log(`[BLE] 🏷️ Raw: ${hexString.substring(0, 50)}...`);
+
+        const parsed = parseTagData(hexString); // Already returns clean hex
+        if (parsed) {
+          console.log(`[BLE] ✅ Tag: ${parsed}`);
+          setLastTagId(parsed);
+        }
       }
     );
 
     monitoringCleanupRef.current = cleanup;
   };
 
-  const stopMonitoring = (): void => {
-    if (monitoringCleanupRef.current) {
-      console.log("[BLE Context] Stopping monitoring...");
-      monitoringCleanupRef.current();
-      monitoringCleanupRef.current = null;
-    } else {
-      console.log("[BLE Context] No active monitoring to stop");
-    }
-  };
   // ============ MANUAL READ ============
   const readChar = async (
     serviceUUID: string,
     charUUID: string
   ): Promise<string | null> => {
-    const currentDevice = connectedDeviceRef.current || connectedDevice;
+    const currentDevice = getCurrentDevice();
 
     if (!currentDevice) {
-      console.error("[BLE Context] ❌ Cannot read - no device connected");
-      setError("No device connected");
+      setError(ERROR_MESSAGES.NO_DEVICE);
       return null;
     }
 
-    console.log("[BLE Context] 📖 Reading characteristic...");
+    console.log("[BLE] 📖 Reading characteristic...");
     setError(null);
 
     const result = await readCharacteristic(
@@ -331,12 +373,10 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
     );
 
     if (result) {
-      console.log(
-        `[BLE Context] ✅ Read complete: ${result.substring(0, 50)}...`
-      );
+      console.log(`[BLE] ✅ Read complete: ${result.substring(0, 50)}...`);
       setLastTagId(result);
     } else {
-      console.log("[BLE Context] ⚠️ No data received");
+      console.log("[BLE] ⚠️ No data received");
     }
 
     return result;

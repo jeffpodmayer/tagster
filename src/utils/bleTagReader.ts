@@ -2,11 +2,12 @@ import { Device } from "react-native-ble-plx";
 import { Buffer } from "buffer";
 
 /**
- * BLE Tag Reader - SIMPLIFIED DISCOVERY MODE
+ * BLE Tag Reader
  *
- * Two functions:
+ * Three functions:
  * 1. discoverDeviceData() - One-time scan to see all characteristics
  * 2. monitorCharacteristic() - Real-time listener for tag data
+ * 3. readCharacteristic() - Read a characteristic once (on-demand)
  */
 
 /**
@@ -50,15 +51,6 @@ export const discoverDeviceData = async (device: Device): Promise<void> => {
               console.log(`     📊 CURRENT VALUE:`);
               console.log(`        Hex: ${hexString}`);
               console.log(`        Length: ${buffer.length} bytes`);
-
-              // Check if it matches your expected tag format
-              if (hexString === "8518A7EE02EF0001000000") {
-                console.log(
-                  `        🎯 THIS IS YOUR TAG! Use this characteristic!`
-                );
-              }
-            } else {
-              console.log(`     📊 CURRENT VALUE: (empty)`);
             }
           } catch (err: any) {
             console.log(`     ⚠️ Could not read: ${err.message}`);
@@ -87,9 +79,9 @@ export const monitorCharacteristic = (
   characteristicUUID: string,
   onDataReceived: (hexString: string) => void
 ): (() => void) => {
-  console.log("[Monitor] 👂 Starting notification listener...");
-  console.log(`[Monitor]    Service: ${serviceUUID}`);
-  console.log(`[Monitor]    Characteristic: ${characteristicUUID}`);
+  console.log("[Monitor] 📡 Starting notification listener...");
+  console.log(`[Monitor]  Service: ${serviceUUID}`);
+  console.log(`[Monitor]  Characteristic: ${characteristicUUID}`);
 
   const subscription = device.monitorCharacteristicForService(
     serviceUUID,
@@ -105,9 +97,9 @@ export const monitorCharacteristic = (
         const hexString = buffer.toString("hex").toUpperCase();
 
         console.log("\n[Monitor] 🔔 NOTIFICATION RECEIVED!");
-        console.log(`[Monitor]    Hex: ${hexString}`);
-        console.log(`[Monitor]    Length: ${buffer.length} bytes`);
-        console.log(`[Monitor]    Time: ${new Date().toLocaleTimeString()}\n`);
+        console.log(`[Monitor]  Hex: ${hexString}`);
+        console.log(`[Monitor]  Length: ${buffer.length} bytes`);
+        console.log(`[Monitor]  Time: ${new Date().toLocaleTimeString()}\n`);
 
         // Pass raw hex to callback (no processing)
         onDataReceived(hexString);
@@ -132,8 +124,8 @@ export const readCharacteristic = async (
   characteristicUUID: string
 ): Promise<string | null> => {
   console.log("[Read] 📖 Reading characteristic...");
-  console.log(`[Read]    Service: ${serviceUUID}`);
-  console.log(`[Read]    Characteristic: ${characteristicUUID}`);
+  console.log(`[Read]  Service: ${serviceUUID}`);
+  console.log(`[Read]  Characteristic: ${characteristicUUID}`);
 
   try {
     const characteristic = await device.readCharacteristicForService(
@@ -146,19 +138,14 @@ export const readCharacteristic = async (
       const hexString = buffer.toString("hex").toUpperCase();
 
       console.log("[Read] ✅ Data received:");
-      console.log(`[Read]    Hex: ${hexString}`);
-      console.log(`[Read]    Length: ${buffer.length} bytes`);
+      console.log(`[Read]  Hex: ${hexString}`);
+      console.log(`[Read]  Length: ${buffer.length} bytes`);
       console.log(
-        `[Read]    Bytes: [${Array.from(buffer)
+        `[Read]  Bytes: [${Array.from(buffer)
           .slice(0, 20)
           .map((b) => `0x${b.toString(16).padStart(2, "0")}`)
           .join(", ")}${buffer.length > 20 ? "..." : ""}]`
       );
-
-      // Check if it looks like it contains your tag
-      if (hexString.includes("8518A7EE02EF0001000000")) {
-        console.log("[Read] 🎯 YOUR TAG FOUND IN DATA!");
-      }
 
       return hexString;
     }
