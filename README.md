@@ -6,6 +6,13 @@ A mobile-first, offline-capable PIT (Passive Integrated Transponder) tag scannin
 
 Tagster is a React Native app allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work.
 
+## Questions that are coming up:
+
+- What are the metadata types? What are the headers on the CSV that gets uplaoded?
+- What is the whole flow from Scanning the tag to uploading the data?
+- What is the format of the PIT Tag data and how is created/where does it come from?
+- Can we connect the existing app to a HPRLite or similiar device and get the device information to build a device library/configuration file?
+
 ## 🛠 Tech Stack
 
 ### Frontend & Framework
@@ -198,6 +205,37 @@ Developer panel in Scan screen:
 - **`src/styles/`** - Theme and styling
 - **`src/utils/`** - Helper functions (BLE & database utilities)
 
+## Deployment
+
+### Branch Strategy
+
+- dev - Development (default)
+- stage - TestFlight builds
+- prod - App Store releases
+
+### TestFlight Deployment
+
+1. Switch to stage branch:
+   git checkout stage
+
+2. Build and submit:
+   eas build --platform ios --profile preview
+   eas submit --platform ios --profile preview
+
+3. Add testers in App Store Connect -> TestFlight -> Internal Testing
+
+### Prerequisites
+
+- Apple Developer Account
+- EAS CLI: npm install -g eas-cli
+- App created in App Store Connect with bundle ID: com.jeffandmarshall.tagster
+
+### Important Notes
+
+- Build numbers must increment for each build (in app.json)
+- First build takes 12-24 hours to process
+- TestFlight builds expire after 90 days
+
 ## 🚧 Roadmap
 
 ### Phase 1: MVP (✅ Complete)
@@ -216,10 +254,10 @@ Developer panel in Scan screen:
 - 🔄 PIT tag reader integration (awaiting hardware)
 - 🔄 Auto-capture tag IDs
 
-### Phase 3: Data Export
+### Phase 3: Data Export(✅ Complete)
 
-- 🔄 CSV export functionality
-- 🔄 Share exported files
+- ✅ CSV export functionality
+- ✅ Share exported files
 
 ### Phase 4: Enhanced Features (Long Term Vision Ideas)
 

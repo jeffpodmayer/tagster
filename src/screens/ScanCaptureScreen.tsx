@@ -35,6 +35,7 @@ const ScanCaptureScreen: React.FC = () => {
     connectedDevice,
     discover,
     readCharacteristic,
+    exportDiscovery,
   } = useBLE();
 
   // Track the last tag ID we've already processed (prevents duplicate alerts)
@@ -258,17 +259,29 @@ const ScanCaptureScreen: React.FC = () => {
               <Card style={{ margin: 8, backgroundColor: "#FFF3CD" }}>
                 <Card.Content>
                   <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
-                    🔧 Setup Mode
+                    🔧 Device Setup
                   </Text>
-                  <Button mode="outlined" onPress={discover}>
-                    Run Discovery
-                  </Button>
-                  <Text
-                    style={{ fontSize: 10, marginTop: 8, color: "#856404" }}
+                  <Button
+                    mode="contained"
+                    onPress={discover}
+                    style={{ marginBottom: 8 }}
                   >
-                    After discovery, update UUIDs in
-                    src/config/bleDeviceConfig.ts
-                  </Text>
+                    Run Discovery (Console)
+                  </Button>
+                  <Button
+                    mode="contained"
+                    onPress={async () => {
+                      try {
+                        await exportDiscovery();
+                        Alert.alert("Success", "Discovery data exported!");
+                      } catch (error: any) {
+                        Alert.alert("Error", error.message || "Export failed");
+                      }
+                    }}
+                    icon="export"
+                  >
+                    Export Discovery Data
+                  </Button>
                 </Card.Content>
               </Card>
             )}
