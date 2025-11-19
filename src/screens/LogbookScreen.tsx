@@ -16,13 +16,15 @@ import {
 import type { AppTheme } from "../styles/theme";
 import { useScans } from "../context/ScanContext";
 import { TagScan } from "../models/types";
+import { ExportDataFAB } from "../components/ExportDataFAB";
 
 const LogbookScreen: React.FC = () => {
   const theme = useTheme<AppTheme>();
-  const { scans, deleteScan, updateScan } = useScans();
+  const { scans, deleteScan, exportToCSV } = useScans();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Dialog states
   const [detailDialogVisible, setDetailDialogVisible] = useState(false);
@@ -152,7 +154,23 @@ const LogbookScreen: React.FC = () => {
       Alert.alert("Error", "Failed to delete scan");
     }
   };
-
+  /**
+   * Handle CSV export
+   */
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      await exportToCSV();
+      // Success - share dialog will appear automatically
+    } catch (err: any) {
+      Alert.alert(
+        "Export Failed",
+        err.message || "Could not export scans. Please try again."
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
   /**
    * Format date for display
    */
@@ -372,16 +390,12 @@ const LogbookScreen: React.FC = () => {
         </Dialog>
       </Portal>
 
-      {/* Export FAB (Future: CSV Export) */}
+      {/* Export FAB */}
       {scans.length > 0 && (
-        <FAB
-          icon="export"
-          style={styles.fab}
-          color={theme.colors.surface}
-          onPress={() =>
-            Alert.alert("Coming Soon", "CSV export will be added next!")
-          }
-          label="Export"
+        <ExportDataFAB
+          onPress={handleExport}
+          disabled={isExporting}
+          isExporting={isExporting}
         />
       )}
     </View>

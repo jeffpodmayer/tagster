@@ -7,6 +7,9 @@ import React, {
 } from "react";
 import { TagScan } from "../models/types";
 import * as Database from "../utils/database";
+import { Paths, File } from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { generateCSV } from "../utils/csvExport";
 
 /**
  * Shape of the ScanContext
@@ -30,6 +33,7 @@ interface ScanContextType {
   deleteAllScans: () => Promise<number>;
   searchScans: (searchTerm: string) => TagScan[];
   refreshScans: () => Promise<void>; // Reload from database
+  exportToCSV: () => Promise<void>; // Export scans to CSV file
 }
 
 /**
@@ -209,6 +213,40 @@ export const ScanProvider: React.FC<ScanProviderProps> = ({ children }) => {
     await loadScans();
   };
 
+  /**
+   * Export scans to CSV and share
+   */
+  const exportToCSV = async (): Promise<void> => {
+    try {
+      // Check if there are scans to export
+      if (scans.length === 0) {
+        throw new Error("No scans to export");
+      }
+
+      // Generate CSV content
+      const csvContent = generateCSV(scans);
+
+      // Create file path with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `tagster_scans_${timestamp}.csv`;
+      // Create file in document directory
+      const file = new File(Paths.document, fileName);
+
+      // Write CSV to file
+      file.write(csvContent);
+
+      // Share the file
+      await Sharing.shareAsync(file.uri, {
+        mimeType: "text/csv",
+        dialogTitle: "Export Scans",
+        UTI: "public.comma-separated-values-text",
+      });
+    } catch (err: any) {
+      console.error("[ScanContext] Export failed:", err);
+      throw new Error(err.message || "Failed to export scans");
+    }
+  };
+
   // Context value that will be provided to children
   const value: ScanContextType = {
     scans,
@@ -221,6 +259,7 @@ export const ScanProvider: React.FC<ScanProviderProps> = ({ children }) => {
     deleteAllScans,
     searchScans,
     refreshScans,
+    exportToCSV,
   };
 
   return <ScanContext.Provider value={value}>{children}</ScanContext.Provider>;
