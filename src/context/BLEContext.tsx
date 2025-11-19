@@ -25,6 +25,11 @@ import {
   parseTagData,
   isConfigured,
 } from "../config/bleDeviceConfig";
+import {
+  discoverDeviceDataStructured,
+  exportDiscoveryData,
+  DiscoveryData,
+} from "../utils/bleDiscoveryExport";
 
 // ============================================
 // ERROR MESSAGES (Centralized)
@@ -98,6 +103,7 @@ interface BLEContextType {
     serviceUUID: string,
     characteristicUUID: string
   ) => Promise<string | null>;
+  exportDiscovery: () => Promise<void>;
 }
 
 /**
@@ -315,6 +321,23 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
     }
   };
 
+  // ============ EXPORT DISCOVERY ============
+  const exportDiscovery = async (): Promise<void> => {
+    const currentDevice = getCurrentDevice();
+    if (!currentDevice) {
+      setError(ERROR_MESSAGES.NO_DEVICE);
+      return;
+    }
+    try {
+      setError(null);
+      const data = await discoverDeviceDataStructured(currentDevice);
+      await exportDiscoveryData(data);
+    } catch (err: any) {
+      setError(`Export failed: ${err.message}`);
+      throw err;
+    }
+  };
+
   // ============ MONITORING ============
   const startMonitoring = (serviceUUID: string, charUUID: string): void => {
     const currentDevice = getCurrentDevice();
@@ -403,6 +426,7 @@ export const BLEProvider: React.FC<BLEProviderProps> = ({ children }) => {
     discover,
     requestPermissions,
     readCharacteristic: readChar,
+    exportDiscovery,
   };
 
   return <BLEContext.Provider value={value}>{children}</BLEContext.Provider>;
