@@ -1,5 +1,7 @@
 // src/models/types.ts
 
+import { State } from "react-native-ble-plx";
+
 /**
  * PIT Tag format types based on ISO 11784/11785 and common variations
  */
@@ -54,3 +56,43 @@ export interface MetadataOptions {
   species: string[];
   sites: string[];
 }
+
+/**
+ * BLE-specific types
+ */
+
+/**
+ * Tag read result from BLE device
+ */
+export interface TagReadResult {
+  tagId: string; // The actual tag ID
+  uuid: string; // Characteristic UUID where it was read from
+  isNew: boolean; // Whether this is a new/changed value
+  timestamp: Date; // When it was read
+}
+
+/**
+ * BLE characteristic with metadata
+ */
+export interface ReadableCharacteristic {
+  characteristic: any; // The actual BLE characteristic object
+  serviceUuid: string; // Parent service UUID
+  charUuid: string; // Characteristic UUID
+}
+
+/**
+ * BLE scan options
+ */
+export interface BLEScanOptions {
+  serviceUUIDs?: string[]; // Filter by specific service UUIDs (null = all devices)
+  autoStopTimeout?: number; // Auto-stop after N milliseconds
+}
+
+/**
+ * BLE connection state
+ */
+export type BLEConnectionState =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "disconnecting";

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { View, StyleSheet, ScrollView, Alert } from "react-native";
 import {
   Text,
@@ -12,14 +12,34 @@ import {
 } from "react-native-paper";
 import { useScans } from "../context/ScanContext";
 import { useAppSettings } from "../context/AppContext";
+import { useBLE } from "../context/BLEContext";
+import { useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import type { RootTabParamList } from "../navigation/AppNavigator";
 import metadataJson from "../data/metadata.json";
 import type { AppTheme } from "../styles/theme";
 import { useTheme } from "react-native-paper";
+import { BLEDeviceModal } from "../components/BLEDeviceModal";
+import { ConnectReaderFAB } from "../components/ConnectReaderFAB";
+
+type NavigationProp = BottomTabNavigationProp<RootTabParamList, "Scan">;
 
 const ScanCaptureScreen: React.FC = () => {
+  const navigation = useNavigation<NavigationProp>();
   const { addScan, scans } = useScans();
   const { settings } = useAppSettings();
   const theme = useTheme<AppTheme>();
+  const {
+    isConnected,
+    lastTagId,
+    connectedDevice,
+    discover,
+    readCharacteristic,
+  } = useBLE();
+
+  // Track the last tag ID we've already processed (prevents duplicate alerts)
+  const lastProcessedTagRef = useRef<string | null>(null);
+
   // Form state
   const [tagId, setTagId] = useState("");
   const [operator, setOperator] = useState(settings.defaultOperator || "");
@@ -31,12 +51,37 @@ const ScanCaptureScreen: React.FC = () => {
   const [speciesMenuVisible, setSpeciesMenuVisible] = useState(false);
   const [siteMenuVisible, setSiteMenuVisible] = useState(false);
 
+  // BLE modal state
+  const [bleModalVisible, setBleModalVisible] = useState(false);
+
   // Update operator when settings change
   useEffect(() => {
     if (settings.defaultOperator && !operator) {
       setOperator(settings.defaultOperator);
     }
   }, [settings.defaultOperator]);
+
+  /// Auto-populate tag ID when BLE device sends data
+  useEffect(() => {
+    if (
+      lastTagId &&
+      lastTagId !== tagId &&
+      lastTagId !== lastProcessedTagRef.current &&
+      tagId.trim() === ""
+    ) {
+      console.log("[ScanCapture] Received tag ID from BLE:", lastTagId);
+      setTagId(lastTagId);
+      Alert.alert("Tag Scanned! 🏷️", `Tag ID: ${lastTagId}\n\nReady to save!`);
+      lastProcessedTagRef.current = lastTagId;
+    }
+  }, [lastTagId, tagId]); // Only run when lastTagId changes
+
+  // Reset processed tag when user clears the input
+  useEffect(() => {
+    if (!tagId) {
+      lastProcessedTagRef.current = null;
+    }
+  }, [tagId]);
 
   const styles = StyleSheet.create({
     container: {
@@ -80,6 +125,10 @@ const ScanCaptureScreen: React.FC = () => {
     },
     spacer: {
       height: theme.spacing.xl,
+    },
+    readButtonContainer: {
+      marginBottom: theme.spacing.md,
+      alignItems: "center",
     },
   });
 
@@ -152,177 +201,234 @@ const ScanCaptureScreen: React.FC = () => {
     }
   };
 
+  /**
+   * NEW: Handle tag read from button
+   */
+  const handleTagRead = (receivedTagId: string) => {
+    console.log("[ScanCapture] Tag received from button:", receivedTagId);
+    setTagId(receivedTagId);
+    Alert.alert(
+      "Tag Scanned! 🏷️",
+      `Tag ID: ${receivedTagId}\n\nReady to save!`
+    );
+  };
+
+  /**
+   * Render the screen
+   */
   return (
-    <ScrollView style={styles.container}>
-      {/* Instructions */}
-      <Card style={styles.card}>
-        <Card.Content>
-          <Text variant="bodyMedium" style={styles.instructions}>
-            📱 Enter tag information manually, or scan with BLE reader (coming
-            soon).
-          </Text>
-        </Card.Content>
-      </Card>
+    <>
+      <ScrollView style={styles.container}>
+        {/* Instructions / Connection Status */}
+        <Card style={styles.card}>
+          <Card.Content>
+            {!isConnected ? (
+              <>
+                <Text variant="bodyMedium" style={styles.instructions}>
+                  📱 Connect via Bluetooth to a PIT Tag reader to scan tags, or
+                  enter manually below.
+                </Text>
+              </>
+            ) : (
+              <Text variant="bodyMedium" style={styles.instructions}>
+                📡 Connected to {connectedDevice?.name || "reader"}.
+                {lastTagId
+                  ? `\n\nLast tag id shown here!{lastTagId}`
+                  : "\n\nScan a tag with your reader!"}
+              </Text>
+            )}
+          </Card.Content>
+        </Card>
 
-      {/* Tag ID Input - Most Important Field */}
-      <Card style={styles.card}>
-        <Card.Title title="🏷 Tag Information" />
-        <Card.Content>
-          <TextInput
-            label="Tag ID *"
-            value={tagId}
-            onChangeText={setTagId}
-            mode="outlined"
-            placeholder="Enter tag ID"
-            style={styles.input}
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
-          <Text variant="bodySmall" style={styles.helpText}>
-            * Required field
-          </Text>
-        </Card.Content>
-      </Card>
-
-      {/* Metadata Fields */}
-      <Card style={styles.card}>
-        <Card.Title
-          title="📝 Scan Metadata"
-          right={(props) => (
-            <IconButton
-              {...props}
-              icon="content-copy"
-              onPress={handleDuplicateLastEntry}
+        {/* Tag ID Input - Most Important Field */}
+        <Card style={styles.card}>
+          <Card.Title title="🏷 Tag Information" />
+          <Card.Content>
+            <TextInput
+              label="Tag ID *"
+              value={tagId}
+              onChangeText={setTagId}
+              mode="outlined"
+              placeholder="Enter tag ID"
+              style={styles.input}
+              autoCapitalize="characters"
+              autoCorrect={false}
             />
-          )}
-        />
-        <Card.Content>
-          {/* Operator */}
-          <TextInput
-            label="👤 Operator"
-            value={operator}
-            onChangeText={setOperator}
-            mode="outlined"
-            placeholder={settings.defaultOperator || "Enter operator name"}
-            style={styles.input}
-          />
+            {isConnected && (
+              <Card style={{ margin: 8, backgroundColor: "#FFF3CD" }}>
+                <Card.Content>
+                  <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+                    🔧 Setup Mode
+                  </Text>
+                  <Button mode="outlined" onPress={discover}>
+                    Run Discovery
+                  </Button>
+                  <Text
+                    style={{ fontSize: 10, marginTop: 8, color: "#856404" }}
+                  >
+                    After discovery, update UUIDs in
+                    src/config/bleDeviceConfig.ts
+                  </Text>
+                </Card.Content>
+              </Card>
+            )}
+            <Text variant="bodySmall" style={styles.helpText}>
+              * Required field
+            </Text>
+          </Card.Content>
+        </Card>
 
-          {/* Species Dropdown */}
-          <Menu
-            visible={speciesMenuVisible}
-            onDismiss={() => setSpeciesMenuVisible(false)}
-            anchor={
-              <Button
-                mode="outlined"
-                onPress={() => setSpeciesMenuVisible(true)}
-                style={styles.dropdownButton}
-                contentStyle={styles.dropdownContent}
-                icon="chevron-down"
-              >
-                {species || "Select Species"}
-              </Button>
-            }
-          >
-            {metadataJson.species.map((sp) => (
+        {/* Metadata Fields */}
+        <Card style={styles.card}>
+          <Card.Title
+            title="📝 Scan Metadata"
+            right={(props) => (
+              <IconButton
+                {...props}
+                icon="content-copy"
+                onPress={handleDuplicateLastEntry}
+              />
+            )}
+          />
+          <Card.Content>
+            {/* Operator */}
+            <TextInput
+              label="👤 Operator"
+              value={operator}
+              onChangeText={setOperator}
+              mode="outlined"
+              placeholder={settings.defaultOperator || "Enter operator name"}
+              style={styles.input}
+            />
+
+            {/* Species Dropdown */}
+            <Menu
+              visible={speciesMenuVisible}
+              onDismiss={() => setSpeciesMenuVisible(false)}
+              anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => setSpeciesMenuVisible(true)}
+                  style={styles.dropdownButton}
+                  contentStyle={styles.dropdownContent}
+                  icon="chevron-down"
+                >
+                  {species || "Select Species"}
+                </Button>
+              }
+            >
+              {metadataJson.species.map((sp) => (
+                <Menu.Item
+                  key={sp}
+                  onPress={() => {
+                    setSpecies(sp);
+                    setSpeciesMenuVisible(false);
+                  }}
+                  title={sp}
+                />
+              ))}
+              <Divider />
               <Menu.Item
-                key={sp}
                 onPress={() => {
-                  setSpecies(sp);
+                  setSpecies(undefined);
                   setSpeciesMenuVisible(false);
                 }}
-                title={sp}
+                title="Clear Selection"
               />
-            ))}
-            <Divider />
-            <Menu.Item
-              onPress={() => {
-                setSpecies(undefined);
-                setSpeciesMenuVisible(false);
-              }}
-              title="Clear Selection"
-            />
-          </Menu>
+            </Menu>
 
-          {/* Site Dropdown */}
-          <Menu
-            visible={siteMenuVisible}
-            onDismiss={() => setSiteMenuVisible(false)}
-            anchor={
-              <Button
-                mode="outlined"
-                onPress={() => setSiteMenuVisible(true)}
-                style={styles.dropdownButton}
-                contentStyle={styles.dropdownContent}
-                icon="chevron-down"
-              >
-                {site || "Select Site"}
-              </Button>
-            }
-          >
-            {metadataJson.sites.map((s) => (
+            {/* Site Dropdown */}
+            <Menu
+              visible={siteMenuVisible}
+              onDismiss={() => setSiteMenuVisible(false)}
+              anchor={
+                <Button
+                  mode="outlined"
+                  onPress={() => setSiteMenuVisible(true)}
+                  style={styles.dropdownButton}
+                  contentStyle={styles.dropdownContent}
+                  icon="chevron-down"
+                >
+                  {site || "Select Site"}
+                </Button>
+              }
+            >
+              {metadataJson.sites.map((s) => (
+                <Menu.Item
+                  key={s}
+                  onPress={() => {
+                    setSite(s);
+                    setSiteMenuVisible(false);
+                  }}
+                  title={s}
+                />
+              ))}
+              <Divider />
               <Menu.Item
-                key={s}
                 onPress={() => {
-                  setSite(s);
+                  setSite(undefined);
                   setSiteMenuVisible(false);
                 }}
-                title={s}
+                title="Clear Selection"
               />
-            ))}
-            <Divider />
-            <Menu.Item
-              onPress={() => {
-                setSite(undefined);
-                setSiteMenuVisible(false);
-              }}
-              title="Clear Selection"
+            </Menu>
+
+            {/* Notes */}
+            <TextInput
+              label="📝 Notes"
+              value={notes}
+              onChangeText={setNotes}
+              mode="outlined"
+              placeholder="Additional observations..."
+              style={styles.input}
+              multiline
+              numberOfLines={3}
             />
-          </Menu>
 
-          {/* Notes */}
-          <TextInput
-            label="📝 Notes"
-            value={notes}
-            onChangeText={setNotes}
+            {/* GPS Status */}
+            {settings.enableGPS && (
+              <Chip icon="map-marker" style={styles.chip}>
+                GPS Enabled (Location will be captured)
+              </Chip>
+            )}
+          </Card.Content>
+        </Card>
+
+        {/* Action Buttons */}
+        <View style={styles.buttonContainer}>
+          <Button
+            mode="contained"
+            onPress={handleSaveScan}
+            style={styles.saveButton}
+            icon="content-save"
+            disabled={!tagId.trim()}
+          >
+            Save Scan
+          </Button>
+
+          <Button
             mode="outlined"
-            placeholder="Additional observations..."
-            style={styles.input}
-            multiline
-            numberOfLines={3}
-          />
+            onPress={handleClearForm}
+            style={styles.clearButton}
+          >
+            Clear Form
+          </Button>
+        </View>
 
-          {/* GPS Status */}
-          {settings.enableGPS && (
-            <Chip icon="map-marker" style={styles.chip}>
-              GPS Enabled (Location will be captured)
-            </Chip>
-          )}
-        </Card.Content>
-      </Card>
+        <View style={styles.spacer} />
+      </ScrollView>
 
-      {/* Action Buttons */}
-      <View style={styles.buttonContainer}>
-        <Button
-          mode="contained"
-          onPress={handleSaveScan}
-          style={styles.saveButton}
-          icon="content-save"
-          disabled={!tagId.trim()}
-        >
-          Save Scan
-        </Button>
+      {/* Connect Reader FAB - Only show when NOT connected */}
+      {!isConnected && (
+        <ConnectReaderFAB onPress={() => setBleModalVisible(true)} />
+      )}
 
-        <Button
-          mode="outlined"
-          onPress={handleClearForm}
-          style={styles.clearButton}
-        >
-          Clear Form
-        </Button>
-      </View>
-
-      <View style={styles.spacer} />
-    </ScrollView>
+      {/* BLE Device Scanner Modal */}
+      <BLEDeviceModal
+        visible={bleModalVisible}
+        onDismiss={() => setBleModalVisible(false)}
+      />
+    </>
   );
 };
 

@@ -4,7 +4,7 @@ A mobile-first, offline-capable PIT (Passive Integrated Transponder) tag scannin
 
 ## 📱 Overview
 
-Tagster is a React Native app built with Expo that allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work.
+Tagster is a React Native app allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work.
 
 ## 🛠 Tech Stack
 
@@ -44,7 +44,7 @@ Tagster is a React Native app built with Expo that allows field researchers to l
 - ✅ **Material Design UI** - Beautiful, themed interface with dark mode support
 - ✅ **Statistics Dashboard** - View scan counts and recent activity
 
-### Coming Soon
+### Future Features and Implementation
 
 - 🔄 **BLE Reader Support** - Auto-capture tag IDs from Bluetooth readers
 - 🔄 **CSV Export** - Export scans for database import
@@ -52,13 +52,12 @@ Tagster is a React Native app built with Expo that allows field researchers to l
 
 ## 📋 Prerequisites
 
-Before you begin, ensure you have the following installed:
-
 - **Node.js** (v18 or higher) - [Download here](https://nodejs.org/)
-- **npm** (comes with Node.js) or **yarn**
-- **Expo Go app** on your mobile device:
-  - [iOS App Store](https://apps.apple.com/app/expo-go/id982107779)
-  - [Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)
+- **npm** (comes with Node.js)
+- **Xcode** (for iOS development)
+- **USB cable** (to connect your iPhone to Mac)
+
+**Note:** This app uses Bluetooth Low Energy (BLE), which requires a development build instead of Expo Go.
 
 ## 🚀 Getting Started
 
@@ -72,29 +71,45 @@ Run: npm install
 
 This will install all required packages including React Native, Expo, React Native Paper, and SQLite.
 
-### 3. Start the Development Server
+### 3. Connect Your iPhone
 
-Run: npm start
+- Plug your iPhone into your Mac with a USB cable
+- Unlock your phone and trust the computer if prompted
 
-Or use: npx expo start
+### 3. First-Time Build in Xcode
 
-### 4. Open on Your Phone
+npx expo run:ios
 
-Once the development server starts, you'll see a QR code in your terminal.
+This will:
 
-**On iOS:**
+- Open the project in Xcode automatically
+- Build the app with BLE support
+- Install it on your connected iPhone
 
-1. Open the Camera app
-2. Point it at the QR code
-3. Tap the notification to open in Expo Go
+**First time in Xcode?** You may need to:
 
-**On Android:**
+- Select your Apple ID as the development team
+- On your iPhone: Settings → General → VPN & Device Management → Trust your developer certificate
 
-1. Open the Expo Go app
-2. Tap "Scan QR code"
-3. Point your camera at the QR code
+### 4. Daily Development
 
-The app will load on your phone within 10-30 seconds!
+After the initial Xcode build, start the dev server:
+
+npm run start:usb
+
+Then scan the QR code with your iPhone camera to load updates.
+
+**Important:** Keep your phone plugged in via USB when using `npm run start:usb`.
+
+### 5. When to Rebuild in Xcode
+
+Only rebuild with `npx expo run:ios` when:
+
+- Adding/removing native dependencies
+- Updating Expo SDK version
+- Changing `app.json`
+
+For regular code changes (TypeScript/React): just save and reload (shake phone → Reload).
 
 ## 📱 Using the App
 
@@ -102,7 +117,6 @@ The app will load on your phone within 10-30 seconds!
 
 1. Go to Settings tab (gear icon)
 2. Set your default operator name - This will auto-fill on new scans
-3. Optional: Enable GPS auto-capture (coming soon)
 
 ### Creating Your First Scan
 
@@ -115,35 +129,29 @@ The app will load on your phone within 10-30 seconds!
    - Add optional notes
 4. Tap "Save Scan"
 
-### Viewing Your Scans
-
-1. Go to Logbook tab (list icon)
-2. Search using the search bar
-3. Tap a scan to view full details
-4. Tap trash icon to delete a scan
-
 ### Tips
 
 - **Duplicate Entry**: On Scan screen, tap the copy icon to duplicate the last scan's metadata
 - **Quick Navigation**: Use the Home dashboard for an overview and quick actions
 - **Persistence**: All data is saved locally - close and reopen the app anytime
+- **Testing BLE**: All features work without a physical tag reader. See `README_DEVICE_SETUP.md` for connecting real hardware.
 
 ## 🐛 Troubleshooting
 
-### App won't load on phone
+### App won't load after scanning QR code
 
-- Make sure your phone and computer are on the same WiFi network
-- Try restarting the Expo dev server: Ctrl+C then npm start
-- Clear Expo Go cache: Shake phone → "Clear Cache"
+- Make sure USB cable is connected
+- Try restarting: Ctrl+C then `npm run start:usb`
+- If still stuck, rebuild: `npx expo run:ios`
 
 ### "Cannot find module" errors
 
-Run: rm -rf node_modules
-Then: npm install
+rm -rf node_modules
+npm install
 
 ### Database errors
 
-The app will automatically initialize the database on first run. If you encounter issues:
+The app automatically initializes the database on first run. If issues occur:
 
 - Uninstall and reinstall the app
 - Or use "Clear All Scan Data" in Settings
@@ -153,6 +161,42 @@ The app will automatically initialize the database on first run. If you encounte
 Restart your TypeScript server:
 
 - VS Code/Cursor: Cmd+Shift+P → "TypeScript: Restart TS Server"
+
+### Xcode build errors
+
+- Make sure Xcode is up to date
+- Clean build folder: Xcode → Product → Clean Build Folder
+- Delete `ios` folder and run `npx expo prebuild` then `npx expo run:ios`
+
+## 👨‍💻 Developer Notes
+
+### When to Rebuild
+
+Rebuild with `npx expo run:ios` only when:
+
+- Adding/removing native dependencies
+- Updating Expo SDK
+- Changing `app.json`
+
+For code changes: just save and reload.
+
+### BLE Development
+
+Developer panel in Scan screen:
+
+- **Run Discovery** - Find device UUIDs for configuration. See `README_DEVICE_SETUP.md` for connecting real hardware.
+
+### Project Structure
+
+- **`src/components/`** - Reusable UI components (BLE modals, FABs)
+- **`src/config/`** - Device configuration (bleDeviceConfig.ts)
+- **`src/context/`** - State management (App, BLE, Scan contexts)
+- **`src/data/`** - Static data (metadata.json)
+- **`src/models/`** - TypeScript types
+- **`src/navigation/`** - React Navigation setup
+- **`src/screens/`** - Main app screens (Home, Scan, Logbook, Settings)
+- **`src/styles/`** - Theme and styling
+- **`src/utils/`** - Helper functions (BLE & database utilities)
 
 ## 🚧 Roadmap
 
@@ -164,10 +208,12 @@ Restart your TypeScript server:
 - ✅ Search and filter
 - ✅ Material Design UI
 
-### Phase 2: BLE Integration (Next)
+### Phase 2: BLE Integration (In Progress)
 
-- 🔄 Expo Dev Client setup
-- 🔄 BLE reader connection
+- ✅ Development build setup
+- ✅ BLE infrastructure (scanning, connecting, discovery)
+- ✅ Device configuration system
+- 🔄 PIT tag reader integration (awaiting hardware)
 - 🔄 Auto-capture tag IDs
 
 ### Phase 3: Data Export
@@ -175,9 +221,10 @@ Restart your TypeScript server:
 - 🔄 CSV export functionality
 - 🔄 Share exported files
 
-### Phase 4: Enhanced Features
+### Phase 4: Enhanced Features (Long Term Vision Ideas)
 
 - 🔄 GPS coordinate capture
+- 🔄 Vibrate on Scan
 - 🔄 Photo attachments
 - 🔄 Cloud sync (optional)
 
