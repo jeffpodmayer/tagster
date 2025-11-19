@@ -15,9 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jeffandmarshall.tagster",
+      "buildNumber": "1.0.0",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
-        "NSBluetoothPeripheralUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field"
+        "NSBluetoothPeripheralUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -33,7 +35,10 @@
         "BLUETOOTH_ADMIN",
         "BLUETOOTH_SCAN",
         "BLUETOOTH_CONNECT",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
       ]
     },
     "web": {
@@ -49,6 +54,11 @@
           "bluetoothAlwaysPermission": "Tagster uses Bluetooth to connect to PIT tag readers in the field"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c1a1fe18-f1f9-4f71-9422-19d94cbc7510"
+      }
+    }
   }
 }
