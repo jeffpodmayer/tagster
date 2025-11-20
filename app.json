@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.jeffandmarshall.tagster",
-      "buildNumber": "1.0.0",
+      "buildNumber": "2",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
         "NSBluetoothPeripheralUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
