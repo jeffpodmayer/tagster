@@ -4,7 +4,7 @@ A mobile-first, offline-capable PIT (Passive Integrated Transponder) tag scannin
 
 ## 📱 Overview
 
-Tagster is a React Native app allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work.
+Tagster is a React Native app allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work. Need to have super duper redunant PIT tag data storage. 
 
 ## Questions that are coming up:
 
@@ -262,6 +262,7 @@ Developer panel in Scan screen:
 ### Phase 4: Enhanced Features (Long Term Vision Ideas)
 
 - 🔄 GPS coordinate capture
+- 🔄 Find a Tag Feature - if you found multiple tags in one wave scan
 - 🔄 Vibrate on Scan
 - 🔄 Photo attachments
 - 🔄 Cloud sync (optional)
