@@ -4,7 +4,7 @@ A mobile-first, offline-capable PIT (Passive Integrated Transponder) tag scannin
 
 ## 📱 Overview
 
-Tagster is a React Native app allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work.
+Tagster is a React Native app allows field researchers to log PIT tag scans with customizable metadata. The app works completely offline and stores all data locally in SQLite, making it perfect for remote field work. Need to have super duper redunant PIT tag data storage. 
 
 ## Questions that are coming up:
 
@@ -262,9 +262,29 @@ Developer panel in Scan screen:
 ### Phase 4: Enhanced Features (Long Term Vision Ideas)
 
 - 🔄 GPS coordinate capture
+- 🔄 Find a Tag Feature - if you found multiple tags in one wave scan
 - 🔄 Vibrate on Scan
 - 🔄 Photo attachments
 - 🔄 Cloud sync (optional)
+
+## Thoughts from meeting with Hannah (11/21/25)
+- With larger tagging effforts the currrent design is not setup for an easy way to upload the data.
+- Easily add fields and store data
+- They want ways to build a form that would work for capturing and organizing PIT tag data
+- Be able to Add Fields
+- Every time ou are hiking a stream - when you have fish capture can we populate the geolocation of the tag.
+
+### Notes that are common 
+- anastesia, concentration, water temp for anastesia, timing of anastesia
+- length - fork lenght total length, around body cirfumfrence of fish
+- weight in grams
+- genetic clip - yes or no and clipID - G preface on ID
+- clip for stable isotopesID - I for isotopes
+- notes on radio or acoustic tag
+- Insert PIT tags
+- Release notes and Addiotnal Notes
+- ShinyApps are a common thing that folks build through
+- barretthannahs@gmail.com
 
 ---
 
