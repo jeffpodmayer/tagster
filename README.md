@@ -220,7 +220,7 @@ Developer panel in Scan screen:
 
 2. Build and submit:
    eas build --platform ios --profile preview
-   eas submit --platform ios --profile preview
+   eas submit --platform ios
 
 3. Add testers in App Store Connect -> TestFlight -> Internal Testing
 
