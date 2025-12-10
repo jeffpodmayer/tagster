@@ -14,12 +14,14 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.jeffandmarshall.tagster",
-      "buildNumber": "2",
+      "bundleIdentifier": "com.jeffandmarshall.tagster.dev",
+      "buildNumber": "3",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
         "NSBluetoothPeripheralUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
         "NSLocationWhenInUseUsageDescription": "Tagster needs your location to record GPS coordinates with each tagged fish",
+        "NSSpeechRecognitionUsageDescription": "Tagster uses speech recognition to transcribe voice notes for field observations",
+        "NSMicrophoneUsageDescription": "Tagster needs microphone access to record voice notes",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

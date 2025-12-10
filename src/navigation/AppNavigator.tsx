@@ -5,10 +5,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 // Import screens
 import HomeScreen from "../screens/HomeScreen";
-import ScanCaptureScreen from "../screens/ScanCaptureScreen";
+import ScanCaptureScreen from "../screens/CollectScreen";
 import LogbookScreen from "../screens/LogbookScreen";
 import SettingsScreen from "../screens/SettingsScreen";
 import type { AppTheme } from "../styles/theme";
+import CollectScreen from "../screens/CollectScreen";
 
 /**
  * Define the navigation param list
@@ -16,7 +17,7 @@ import type { AppTheme } from "../styles/theme";
  */
 export type RootTabParamList = {
   Home: undefined;
-  Scan: undefined;
+  Collect: undefined;
   Logbook: undefined;
   Settings: undefined;
 };
@@ -32,7 +33,7 @@ export const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <Tab.Navigator
-        initialRouteName="Scan"
+        initialRouteName="Collect"
         screenOptions={({ route }) => ({
           tabBarIcon: ({ focused, color, size }) => {
             let iconName: keyof typeof Ionicons.glyphMap;
@@ -40,7 +41,7 @@ export const AppNavigator: React.FC = () => {
             // Set icon based on route name
             if (route.name === "Home") {
               iconName = focused ? "home" : "home-outline";
-            } else if (route.name === "Scan") {
+            } else if (route.name === "Collect") {
               iconName = focused ? "add-circle" : "add-circle-outline";
             } else if (route.name === "Logbook") {
               iconName = focused ? "list" : "list-outline";
@@ -69,9 +70,9 @@ export const AppNavigator: React.FC = () => {
           options={{ title: "Dashboard" }}
         />
         <Tab.Screen
-          name="Scan"
-          component={ScanCaptureScreen}
-          options={{ title: "Scan" }}
+          name="Collect"
+          component={CollectScreen}
+          options={{ title: "Collect" }}
         />
         <Tab.Screen
           name="Logbook"
