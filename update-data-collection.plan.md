@@ -2,7 +2,7 @@
 
 ## Overview
 
-Add new data fields (anesthesia, measurements, clips, GPS, custom fields) using a swipeable tabbed interface optimized for field use with gloves. Include offline voice transcription for Notes, Operator, and custom field values.
+Add new data fields (anesthesia, measurements, clips, GPS, custom fields) using expandable dropdown sections on a single scrollable screen - optimized for glove-friendly field use. Include offline voice transcription for Notes, Operator, and custom field values.
 
 ## Core Implementation
 
@@ -17,15 +17,16 @@ Add new data fields (anesthesia, measurements, clips, GPS, custom fields) using 
 - Add migration to alter `tag_scans` table with new columns (all nullable)
 - Update `createScan` and `updateScan` to handle new fields
 
-### 2. Tabbed Form Interface
+### 2. Expandable Form Sections
 
 **File: `src/screens/ScanCaptureScreen.tsx`**
 
-- Replace form with swipeable tabs (use `react-native-pager-view` or React Native Paper `Tabs`)
-- Tabs: Tag (Tag ID, Operator), Basic (Species, Site, Notes), Anesthesia, Measurements, Clips (Genetic + Isotope), Radio/Acoustic, Custom Fields, Location (GPS)
-- Keep Tag ID visible from all tabs
-- Large touch targets (44x44px minimum) for all inputs
+- Use React Native Paper `Accordion` or expandable cards for sections
+- Single scrollable screen with all sections visible (expand/collapse)
+- Sections: Tag Information (always expanded - Tag ID, Operator), Basic Metadata (Species, Site, Notes), Anesthesia, Measurements, Clips (Genetic + Isotope), Radio/Acoustic, Custom Fields, Location (GPS)
+- Large touch targets (44x44px minimum) for all inputs and expand/collapse buttons
 - Auto-save form state
+- Everything on one screen - no swiping needed
 
 ### 3. Voice Transcription
 
@@ -49,7 +50,7 @@ Add new data fields (anesthesia, measurements, clips, GPS, custom fields) using 
 **File: `src/utils/location.ts` (new)**
 
 - Use `expo-location` for GPS capture
-- Manual capture button in Location tab
+- Manual capture button in Location section
 
 ### 5. Custom Fields
 

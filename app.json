@@ -19,6 +19,7 @@
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
         "NSBluetoothPeripheralUsageDescription": "Tagster uses Bluetooth to connect to PIT tag readers in the field",
+        "NSLocationWhenInUseUsageDescription": "Tagster needs your location to record GPS coordinates with each tagged fish",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

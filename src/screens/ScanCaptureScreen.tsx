@@ -9,6 +9,7 @@ import {
   Divider,
   Chip,
   IconButton,
+  List,
 } from "react-native-paper";
 import { useScans } from "../context/ScanContext";
 import { useAppSettings } from "../context/AppContext";
@@ -21,6 +22,7 @@ import type { AppTheme } from "../styles/theme";
 import { useTheme } from "react-native-paper";
 import { BLEDeviceModal } from "../components/BLEDeviceModal";
 import { ConnectReaderFAB } from "../components/ConnectReaderFAB";
+import * as Location from "expo-location";
 
 type NavigationProp = BottomTabNavigationProp<RootTabParamList, "Scan">;
 
@@ -48,12 +50,24 @@ const ScanCaptureScreen: React.FC = () => {
   const [site, setSite] = useState<string | undefined>(undefined);
   const [notes, setNotes] = useState("");
 
+  // GPS state
+  const [gpsLatitude, setGpsLatitude] = useState<number | undefined>(undefined);
+  const [gpsLongitude, setGpsLongitude] = useState<number | undefined>(
+    undefined
+  );
+  const [gpsTimestamp, setGpsTimestamp] = useState<string | undefined>(
+    undefined
+  );
+
   // Menu visibility state
   const [speciesMenuVisible, setSpeciesMenuVisible] = useState(false);
   const [siteMenuVisible, setSiteMenuVisible] = useState(false);
 
   // BLE modal state
   const [bleModalVisible, setBleModalVisible] = useState(false);
+
+  // Accordion state
+  const [tagExpanded, setTagExpanded] = useState(true);
 
   // Update operator when settings change
   useEffect(() => {
@@ -93,15 +107,21 @@ const ScanCaptureScreen: React.FC = () => {
       margin: theme.spacing.md,
       marginBottom: 0,
     },
+    accordion: {
+      margin: theme.spacing.xs,
+      marginBottom: 0,
+    },
     instructions: {
       textAlign: "center" as const,
       color: theme.colors.textSecondary,
     },
     input: {
-      marginBottom: theme.spacing.md,
+      marginBottom: theme.spacing.sm,
+      marginTop: theme.spacing.sm,
     },
     helpText: {
       color: theme.colors.textSecondary,
+      marginBottom: theme.spacing.md,
       fontStyle: "italic" as const,
     },
     dropdownButton: {
@@ -185,6 +205,8 @@ const ScanCaptureScreen: React.FC = () => {
         species,
         site,
         notes: notes.trim() || undefined,
+        latitude: gpsLatitude || undefined,
+        longitude: gpsLongitude || undefined,
       });
 
       Alert.alert("Success", "Scan saved successfully!", [
@@ -193,6 +215,9 @@ const ScanCaptureScreen: React.FC = () => {
           onPress: () => {
             setTagId("");
             setNotes("");
+            setGpsLatitude(undefined);
+            setGpsLongitude(undefined);
+            setGpsTimestamp(undefined);
             // Keep operator, species, site for next scan
           },
         },
@@ -214,6 +239,47 @@ const ScanCaptureScreen: React.FC = () => {
     );
   };
 
+  const handleCaptureGPS = async () => {
+    try {
+      // Request permission first
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Denied",
+          "Location permission is required to capture GPS coordinates."
+        );
+        return;
+      }
+
+      // Get current position (removed loading alert for smoother UX)
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      // Update state with captured data
+      setGpsLatitude(location.coords.latitude);
+      setGpsLongitude(location.coords.longitude);
+      setGpsTimestamp(new Date().toISOString());
+
+      // Success feedback with accuracy info
+      Alert.alert(
+        "GPS Captured ✓",
+        `Lat: ${location.coords.latitude.toFixed(
+          6
+        )}\nLong: ${location.coords.longitude.toFixed(
+          6
+        )}\nAccuracy: ${location.coords.accuracy?.toFixed(1)}m`
+      );
+    } catch (error) {
+      console.error("[GPS] Capture failed:", error);
+      Alert.alert(
+        "GPS Error",
+        "Unable to capture location. Please ensure GPS is enabled and you have a clear view of the sky."
+      );
+    }
+  };
+
   /**
    * Render the screen
    */
@@ -226,7 +292,7 @@ const ScanCaptureScreen: React.FC = () => {
             {!isConnected ? (
               <>
                 <Text variant="bodyMedium" style={styles.instructions}>
-                  📱 Connect via Bluetooth to a PIT Tag reader to scan tags, or
+                  📱 Connect via Bluetooth to a Tag reader to scan tags, or
                   enter manually below.
                 </Text>
               </>
@@ -243,52 +309,137 @@ const ScanCaptureScreen: React.FC = () => {
 
         {/* Tag ID Input - Most Important Field */}
         <Card style={styles.card}>
-          <Card.Title title="🏷 Tag Information" />
-          <Card.Content>
-            <TextInput
-              label="Tag ID *"
-              value={tagId}
-              onChangeText={setTagId}
-              mode="outlined"
-              placeholder="Enter tag ID"
-              style={styles.input}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            {isConnected && (
-              <Card style={{ margin: 8, backgroundColor: "#FFF3CD" }}>
-                <Card.Content>
-                  <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
-                    🔧 Device Setup
+          <List.Accordion
+            title="🏷️ Tag Information"
+            titleStyle={{ fontSize: 18, fontWeight: "bold" }}
+            style={styles.accordion}
+            expanded={tagExpanded}
+            onPress={() => setTagExpanded(!tagExpanded)}
+          >
+            <Card.Content>
+              <TextInput
+                label="Tag ID *"
+                value={tagId}
+                onChangeText={setTagId}
+                mode="outlined"
+                placeholder="Enter tag ID"
+                style={styles.input}
+                autoCapitalize="characters"
+                autoCorrect={false}
+              />
+
+              {/* Geolocation Section */}
+              <View style={{ marginBottom: theme.spacing.md }}>
+                <Text
+                  variant="titleSmall"
+                  style={{ marginBottom: 8, fontWeight: "bold" }}
+                >
+                  📍 Capture Location
+                </Text>
+
+                <View style={{ flexDirection: "row", gap: 8, marginBottom: 8 }}>
+                  <Button
+                    mode="contained-tonal"
+                    icon="crosshairs-gps"
+                    onPress={handleCaptureGPS}
+                    style={{ flex: 1 }}
+                  >
+                    Capture Location
+                  </Button>
+
+                  {/* Show clear button only if GPS is captured */}
+                  {gpsLatitude && gpsLongitude && (
+                    <Button
+                      mode="outlined"
+                      icon="close"
+                      onPress={() => {
+                        setGpsLatitude(undefined);
+                        setGpsLongitude(undefined);
+                        setGpsTimestamp(undefined);
+                        Alert.alert("GPS Cleared", "Location data removed");
+                      }}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </View>
+
+                {/* Display captured coordinates */}
+                <View
+                  style={{
+                    backgroundColor: theme.colors.surfaceVariant,
+                    padding: 12,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: theme.colors.onSurfaceVariant }}
+                  >
+                    Latitude:{" "}
+                    {gpsLatitude ? gpsLatitude.toFixed(6) : "Not captured"}
                   </Text>
-                  <Button
-                    mode="contained"
-                    onPress={discover}
-                    style={{ marginBottom: 8 }}
+                  <Text
+                    variant="bodySmall"
+                    style={{ color: theme.colors.onSurfaceVariant }}
                   >
-                    Run Discovery (Console)
-                  </Button>
-                  <Button
-                    mode="contained"
-                    onPress={async () => {
-                      try {
-                        await exportDiscovery();
-                        Alert.alert("Success", "Discovery data exported!");
-                      } catch (error: any) {
-                        Alert.alert("Error", error.message || "Export failed");
-                      }
+                    Longitude:{" "}
+                    {gpsLongitude ? gpsLongitude.toFixed(6) : "Not captured"}
+                  </Text>
+                  <Text
+                    variant="bodySmall"
+                    style={{
+                      color: theme.colors.onSurfaceVariant,
+                      marginTop: 4,
                     }}
-                    icon="export"
                   >
-                    Export Discovery Data
-                  </Button>
-                </Card.Content>
-              </Card>
-            )}
-            <Text variant="bodySmall" style={styles.helpText}>
-              * Required field
-            </Text>
-          </Card.Content>
+                    Captured:{" "}
+                    {gpsTimestamp
+                      ? new Date(gpsTimestamp).toLocaleString()
+                      : "Not captured"}
+                  </Text>
+                </View>
+              </View>
+
+              {isConnected && (
+                <Card style={{ margin: 8, backgroundColor: "#FFF3CD" }}>
+                  <Card.Content>
+                    <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+                      🔧 Device Setup
+                    </Text>
+                    <Button
+                      mode="contained"
+                      onPress={discover}
+                      style={{ marginBottom: 8 }}
+                    >
+                      Run Discovery (Console)
+                    </Button>
+                    <Button
+                      mode="contained"
+                      onPress={async () => {
+                        try {
+                          await exportDiscovery();
+                          Alert.alert("Success", "Discovery data exported!");
+                        } catch (error: any) {
+                          Alert.alert(
+                            "Error",
+                            error.message || "Export failed"
+                          );
+                        }
+                      }}
+                      icon="export"
+                    >
+                      Export Discovery Data
+                    </Button>
+                  </Card.Content>
+                </Card>
+              )}
+
+              <Text variant="bodySmall" style={styles.helpText}>
+                * Required field
+              </Text>
+            </Card.Content>
+          </List.Accordion>
         </Card>
 
         {/* Metadata Fields */}
