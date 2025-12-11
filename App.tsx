@@ -6,6 +6,7 @@ import { AppProvider } from "./src/context/AppContext";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { theme } from "./src/styles/theme";
 import { BLEProvider } from "./src/context/BLEContext";
+import { VoiceProvider } from "./src/context/VoiceContext";
 
 /**
  * Main App Component
@@ -23,9 +24,11 @@ export default function App() {
     <PaperProvider theme={theme}>
       <AppProvider>
         <BLEProvider>
-          <ScanProvider>
-            <AppNavigator />
-          </ScanProvider>
+          <VoiceProvider>
+            <ScanProvider>
+              <AppNavigator />
+            </ScanProvider>
+          </VoiceProvider>
         </BLEProvider>
       </AppProvider>
     </PaperProvider>

@@ -29,8 +29,11 @@ import type { AppTheme } from "../styles/theme";
 import { useTheme } from "react-native-paper";
 import { BLEDeviceModal } from "../components/BLEDeviceModal";
 import { ConnectReaderFAB } from "../components/ConnectReaderFAB";
-import { VoiceInputButton } from "../components/VoiceInputButton";
+import { MeasurementsAccordion } from "../components/collect/MeasurementsAccordion";
+import { SamplesAccordion } from "../components/collect/SamplesAccordion";
 import { TagInformationAccordion } from "../components/collect/TagInformationAccordion";
+import { AnesthesiaAccordion } from "../components/collect/AnesthesiaAccordion";
+import { NotesAccordion } from "../components/collect/NotesAccordion";
 import { BasicMetadataAccordion } from "../components/collect/BasicMetadataAccordion";
 import * as Location from "expo-location";
 
@@ -79,6 +82,30 @@ const CollectScreen: React.FC = () => {
   // Accordion state
   const [tagExpanded, setTagExpanded] = useState(false);
   const [basicExpanded, setBasicExpanded] = useState(false);
+  const [measurementsExpanded, setMeasurementsExpanded] = useState(false);
+  const [samplesExpanded, setSamplesExpanded] = useState(false);
+  const [anesthesiaExpanded, setAnesthesiaExpanded] = useState(false);
+  const [notesExpanded, setNotesExpanded] = useState(false);
+  // Measurements state
+  const [forkLength, setForkLength] = useState("");
+  const [totalLength, setTotalLength] = useState("");
+  const [bodyCircumference, setBodyCircumference] = useState("");
+  const [weight, setWeight] = useState("");
+
+  // Samples state
+  const [geneticClipEnabled, setGeneticClipEnabled] = useState(false);
+  const [geneticClipId, setGeneticClipId] = useState("");
+  const [isotopeClipEnabled, setIsotopeClipEnabled] = useState(false);
+  const [isotopeClipId, setIsotopeClipId] = useState("");
+
+  // Anesthesia state
+  const [anesthesiaConcentration, setAnesthesiaConcentration] = useState("");
+  const [anesthesiaWaterTemp, setAnesthesiaWaterTemp] = useState("");
+  const [anesthesiaTiming, setAnesthesiaTiming] = useState("");
+
+  // Notes state
+  const [releaseNotes, setReleaseNotes] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
 
   // Update operator when settings change
   useEffect(() => {
@@ -165,30 +192,6 @@ const CollectScreen: React.FC = () => {
   });
 
   /**
-   * Duplicate the last entry's metadata
-   */
-  const handleDuplicateLastEntry = () => {
-    if (scans.length === 0) {
-      Alert.alert(
-        "No Previous Scans",
-        "There are no previous scans to duplicate."
-      );
-      return;
-    }
-
-    const lastScan = scans[0]; // scans are sorted newest first
-    setOperator(lastScan.operator || settings.defaultOperator || "");
-    setSpecies(lastScan.species);
-    setSite(lastScan.site);
-    setNotes(lastScan.notes || "");
-
-    Alert.alert(
-      "Success",
-      "Duplicated metadata from last scan. Enter new tag ID."
-    );
-  };
-
-  /**
    * Clear the form
    */
   const handleClearForm = () => {
@@ -197,6 +200,25 @@ const CollectScreen: React.FC = () => {
     setSpecies(undefined);
     setSite(undefined);
     setNotes("");
+    setForkLength("");
+    setTotalLength("");
+    setBodyCircumference("");
+    setWeight("");
+    setGeneticClipEnabled(false);
+    setGeneticClipId("");
+    setIsotopeClipEnabled(false);
+    setIsotopeClipId("");
+    setMeasurementsExpanded(false);
+    setSamplesExpanded(false);
+    setBasicExpanded(false);
+    setTagExpanded(false);
+    setAnesthesiaExpanded(false);
+    setAnesthesiaConcentration("");
+    setAnesthesiaWaterTemp("");
+    setAnesthesiaTiming("");
+    setReleaseNotes("");
+    setAdditionalNotes("");
+    setNotesExpanded(false);
   };
 
   /**
@@ -303,7 +325,7 @@ const CollectScreen: React.FC = () => {
       >
         <ScrollView style={styles.container}>
           {/* Instructions / Connection Status */}
-          <Card style={styles.card}>
+          {/* <Card style={styles.card}>
             <Card.Content>
               {!isConnected ? (
                 <>
@@ -321,7 +343,7 @@ const CollectScreen: React.FC = () => {
                 </Text>
               )}
             </Card.Content>
-          </Card>
+          </Card> */}
 
           <TagInformationAccordion
             expanded={tagExpanded}
@@ -358,6 +380,60 @@ const CollectScreen: React.FC = () => {
             siteMenuVisible={siteMenuVisible}
             onSiteMenuVisibilityChange={setSiteMenuVisible}
             enableGPS={settings.enableGPS}
+            styles={styles}
+          />
+
+          {/* Measurements */}
+          <MeasurementsAccordion
+            expanded={measurementsExpanded}
+            onToggle={() => setMeasurementsExpanded(!measurementsExpanded)}
+            forkLength={forkLength}
+            onForkLengthChange={setForkLength}
+            totalLength={totalLength}
+            onTotalLengthChange={setTotalLength}
+            bodyCircumference={bodyCircumference}
+            onBodyCircumferenceChange={setBodyCircumference}
+            weight={weight}
+            onWeightChange={setWeight}
+            styles={styles}
+          />
+
+          {/* Samples */}
+          <SamplesAccordion
+            expanded={samplesExpanded}
+            onToggle={() => setSamplesExpanded(!samplesExpanded)}
+            geneticClipEnabled={geneticClipEnabled}
+            onGeneticClipEnabledChange={setGeneticClipEnabled}
+            geneticClipId={geneticClipId}
+            onGeneticClipIdChange={setGeneticClipId}
+            isotopeClipEnabled={isotopeClipEnabled}
+            onIsotopeClipEnabledChange={setIsotopeClipEnabled}
+            isotopeClipId={isotopeClipId}
+            onIsotopeClipIdChange={setIsotopeClipId}
+            styles={styles}
+          />
+
+          {/* Anesthesia */}
+          <AnesthesiaAccordion
+            expanded={anesthesiaExpanded}
+            onToggle={() => setAnesthesiaExpanded(!anesthesiaExpanded)}
+            concentration={anesthesiaConcentration}
+            onConcentrationChange={setAnesthesiaConcentration}
+            waterTemp={anesthesiaWaterTemp}
+            onWaterTempChange={setAnesthesiaWaterTemp}
+            timing={anesthesiaTiming}
+            onTimingChange={setAnesthesiaTiming}
+            styles={styles}
+          />
+
+          {/* Notes */}
+          <NotesAccordion
+            expanded={notesExpanded}
+            onToggle={() => setNotesExpanded(!notesExpanded)}
+            releaseNotes={releaseNotes}
+            onReleaseNotesChange={setReleaseNotes}
+            additionalNotes={additionalNotes}
+            onAdditionalNotesChange={setAdditionalNotes}
             styles={styles}
           />
 

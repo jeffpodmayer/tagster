@@ -1,63 +1,75 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { IconButton } from "react-native-paper";
-import Voice from "@react-native-voice/voice";
 import { View } from "react-native";
 import { theme } from "../styles/theme";
+import { useVoice } from "../context/VoiceContext";
 
 interface VoiceInputButtonProps {
   onTranscriptionComplete: (text: string) => void;
 }
 
+/**
+ * VoiceInputButton Component
+ *
+ * HOW IT WORKS:
+ * 1. Each button instance gets a unique ID (generated once on mount)
+ * 2. Uses VoiceContext to manage recording (no direct Voice API calls)
+ * 3. On press: calls context.startRecording() with its ID and callback
+ * 4. Context handles all Voice event listeners and callback management
+ * 5. On stop: calls context.stopRecording() which sends transcription to this button's callback
+ * 6. Cleanup: unregisters itself when component unmounts
+ *
+ * BENEFITS:
+ * - No conflicts between multiple buttons (context coordinates everything)
+ * - All buttons share the same recording session
+ * - Each button receives transcription results independently
+ */
 export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   onTranscriptionComplete,
 }) => {
-  const [isRecording, setIsRecording] = useState(false);
+  // Get recording state and control methods from context
+  const { isRecording, startRecording, stopRecording } = useVoice();
 
-  const accumulatedTextRef = useRef("");
+  // Generate a unique ID for this button instance
+  // This ID is used to register/unregister this button's callback in the context
+  const buttonIdRef = useRef<string>(
+    `voice-btn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  );
 
+  // Keep callback ref updated (in case parent component changes the callback)
+  const callbackRef = useRef(onTranscriptionComplete);
   useEffect(() => {
-    Voice.onSpeechStart = () => {
-      setIsRecording(true);
-      accumulatedTextRef.current = ""; // Reset
-    };
-
-    Voice.onSpeechResults = (e) => {
-      if (e.value && e.value.length > 0) {
-        // Always take the last (most complete) result
-        accumulatedTextRef.current = e.value[e.value.length - 1];
-      }
-    };
-
-    Voice.onSpeechError = (e) => {
-      console.error("[Voice] Error:", e);
-      setIsRecording(false);
-    };
-
-    return () => {
-      Voice.destroy().then(Voice.removeAllListeners);
-    };
+    callbackRef.current = onTranscriptionComplete;
   }, [onTranscriptionComplete]);
 
-  const handlePress = async () => {
+  // Cleanup: unregister this button when component unmounts
+  useEffect(() => {
+    return () => {
+      // If this button was recording, stop it
+      if (isRecording) {
+        stopRecording(buttonIdRef.current).catch((error) => {
+          console.error("[VoiceInputButton] Cleanup error:", error);
+        });
+      }
+    };
+  }, []); // Only run on unmount
+
+  /**
+   * Handle button press
+   * Toggles recording state for this button
+   */
+  const handlePress = async (): Promise<void> => {
     if (isRecording) {
-      try {
-        await Voice.stop();
-        setIsRecording(false);
-        // Send the accumulated text
-        if (accumulatedTextRef.current) {
-          onTranscriptionComplete(accumulatedTextRef.current);
-          accumulatedTextRef.current = ""; // Reset
-        }
-      } catch (error) {
-        console.error("[Voice] Failed to stop:", error);
-        setIsRecording(false);
-      }
+      // Stop recording for this button
+      // Context will send accumulated text to this button's callback
+      await stopRecording(buttonIdRef.current);
     } else {
-      try {
-        await Voice.start("en-US");
-      } catch (error) {
-        console.error("[Voice] Failed to start:", error);
-      }
+      // Start recording (or register callback if already recording)
+      // Context handles starting Voice if needed
+      await startRecording(buttonIdRef.current, (text: string) => {
+        // This callback is called by context when transcription is complete
+        callbackRef.current(text);
+      });
     }
   };
 
