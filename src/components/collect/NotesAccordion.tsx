@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { View } from "react-native";
 import { Card, List, TextInput } from "react-native-paper";
 import { useTheme } from "react-native-paper";
@@ -25,6 +25,7 @@ export const NotesAccordion: React.FC<NotesAccordionProps> = ({
   styles,
 }) => {
   const theme = useTheme<AppTheme>();
+  const lastReleaseTextRef = useRef<string>("");
 
   return (
     <Card style={styles.card}>
@@ -57,9 +58,11 @@ export const NotesAccordion: React.FC<NotesAccordionProps> = ({
             />
             <VoiceInputButton
               onTranscriptionComplete={(text) => {
-                onReleaseNotesChange(
-                  releaseNotes ? `${releaseNotes} ${text}` : text
-                );
+                // Only update if text is different/new
+                if (text !== lastReleaseTextRef.current) {
+                  onReleaseNotesChange(text);
+                  lastReleaseTextRef.current = text;
+                }
               }}
             />
           </View>
@@ -85,9 +88,8 @@ export const NotesAccordion: React.FC<NotesAccordionProps> = ({
             />
             <VoiceInputButton
               onTranscriptionComplete={(text) => {
-                onAdditionalNotesChange(
-                  additionalNotes ? `${additionalNotes} ${text}` : text
-                );
+                // Replace with latest text (Voice sends complete transcription each time)
+                onAdditionalNotesChange(text);
               }}
             />
           </View>

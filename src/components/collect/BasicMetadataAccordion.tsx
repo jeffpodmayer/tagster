@@ -132,31 +132,6 @@ export const BasicMetadataAccordion: React.FC<BasicMetadataAccordionProps> = ({
             />
           </Menu>
 
-          {/* Notes with Voice Input */}
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              marginBottom: theme.spacing.md,
-            }}
-          >
-            <TextInput
-              label="Record Notes"
-              value={notes}
-              onChangeText={onNotesChange}
-              mode="outlined"
-              placeholder="Additional observations..."
-              style={[styles.input, { flex: 1, marginRight: 8 }]}
-              multiline
-              numberOfLines={3}
-            />
-            <VoiceInputButton
-              onTranscriptionComplete={(text) => {
-                onNotesChange(notes ? `${notes} ${text}` : text);
-              }}
-            />
-          </View>
-
           {/* GPS Status */}
           {enableGPS && (
             <Chip icon="map-marker" style={styles.chip}>

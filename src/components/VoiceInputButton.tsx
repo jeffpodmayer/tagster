@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { IconButton } from "react-native-paper";
 import { View } from "react-native";
 import { theme } from "../styles/theme";
@@ -28,13 +28,30 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   onTranscriptionComplete,
 }) => {
   // Get recording state and control methods from context
-  const { isRecording, startRecording, stopRecording } = useVoice();
+  const { isButtonRecording, startRecording, stopRecording } = useVoice();
 
   // Generate a unique ID for this button instance
   // This ID is used to register/unregister this button's callback in the context
   const buttonIdRef = useRef<string>(
     `voice-btn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   );
+
+  useEffect(() => {
+    console.log(
+      "[VoiceInputButton] Button mounted with ID:",
+      buttonIdRef.current
+    );
+    return () => {
+      console.log(
+        "[VoiceInputButton] Button unmounting with ID:",
+        buttonIdRef.current
+      );
+    };
+  }, []);
+
+  // Check if THIS specific button is recording (not global state)
+  // This is calculated on each render to get the latest state
+  const isThisButtonRecording = isButtonRecording(buttonIdRef.current);
 
   // Keep callback ref updated (in case parent component changes the callback)
   const callbackRef = useRef(onTranscriptionComplete);
@@ -46,24 +63,75 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
   useEffect(() => {
     return () => {
       // If this button was recording, stop it
-      if (isRecording) {
+      if (isThisButtonRecording) {
         stopRecording(buttonIdRef.current).catch((error) => {
           console.error("[VoiceInputButton] Cleanup error:", error);
         });
       }
     };
-  }, []); // Only run on unmount
+  }, [isThisButtonRecording, stopRecording]); // Include dependencies
 
   /**
    * Handle button press
    * Toggles recording state for this button
    */
   const handlePress = async (): Promise<void> => {
-    if (isRecording) {
+    // #region agent log
+    fetch("http://127.0.0.1:7242/ingest/762a5187-e725-42d0-8faf-b1628f7b2491", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "VoiceInputButton.tsx:64",
+        message: "handlePress called",
+        data: { buttonId: buttonIdRef.current, isThisButtonRecording },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "post-fix",
+        hypothesisId: "A",
+      }),
+    }).catch(() => {});
+    // #endregion
+    if (isThisButtonRecording) {
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7242/ingest/762a5187-e725-42d0-8faf-b1628f7b2491",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "VoiceInputButton.tsx:80",
+            message: "Stopping recording",
+            data: { buttonId: buttonIdRef.current },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "post-fix",
+            hypothesisId: "B",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       // Stop recording for this button
       // Context will send accumulated text to this button's callback
       await stopRecording(buttonIdRef.current);
     } else {
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7242/ingest/762a5187-e725-42d0-8faf-b1628f7b2491",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            location: "VoiceInputButton.tsx:102",
+            message: "Starting recording",
+            data: { buttonId: buttonIdRef.current },
+            timestamp: Date.now(),
+            sessionId: "debug-session",
+            runId: "post-fix",
+            hypothesisId: "C",
+          }),
+        }
+      ).catch(() => {});
+      // #endregion
       // Start recording (or register callback if already recording)
       // Context handles starting Voice if needed
       await startRecording(buttonIdRef.current, (text: string) => {
@@ -73,6 +141,27 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
     }
   };
 
+  // #region agent log
+  useEffect(() => {
+    fetch("http://127.0.0.1:7242/ingest/762a5187-e725-42d0-8faf-b1628f7b2491", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        location: "VoiceInputButton.tsx:133",
+        message: "Rendering button",
+        data: {
+          buttonId: buttonIdRef.current,
+          isThisButtonRecording,
+          willShowRed: isThisButtonRecording,
+        },
+        timestamp: Date.now(),
+        sessionId: "debug-session",
+        runId: "post-fix",
+        hypothesisId: "A",
+      }),
+    }).catch(() => {});
+  }, [isThisButtonRecording]);
+  // #endregion
   return (
     <View
       style={{
@@ -81,16 +170,16 @@ export const VoiceInputButton: React.FC<VoiceInputButtonProps> = ({
         height: 44,
         borderRadius: 22,
         borderWidth: 2,
-        borderColor: isRecording ? "#FF0000" : theme.colors.outline,
+        borderColor: isThisButtonRecording ? "#FF0000" : theme.colors.outline,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: isRecording ? "#FF0000" : "transparent",
+        backgroundColor: isThisButtonRecording ? "#FF0000" : "transparent",
       }}
     >
       <IconButton
-        icon={isRecording ? "stop-circle" : "microphone"}
+        icon={isThisButtonRecording ? "stop-circle" : "microphone"}
         size={24}
-        iconColor={isRecording ? "#FFFFFF" : theme.colors.onSurface}
+        iconColor={isThisButtonRecording ? "#FFFFFF" : theme.colors.onSurface}
         onPress={handlePress}
         style={{ margin: 0 }}
       />
